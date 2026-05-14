@@ -12,24 +12,25 @@ import {
   Minus, 
   Send, 
   Heart, 
-  Wallet,
-  Apple,
-  Beef,
-  Egg,
-  Martini,
-  SprayCan,
-  Baby,
-  Stethoscope,
-  Coffee,
-  PenTool,
-  CheckCircle2,
-  Gift,
-  CloudIcon,
-  Trash2,
-  Check,
-  Store,
-  Download,
-  Image as ImageIcon
+  Wallet, 
+  Apple, 
+  Beef, 
+  Egg, 
+  Martini, 
+  SprayCan, 
+  Baby, 
+  Stethoscope, 
+  Coffee, 
+  PenTool, 
+  CheckCircle2, 
+  Gift, 
+  CloudIcon, 
+  Trash2, 
+  Check, 
+  Store, 
+  Download, 
+  Image as ImageIcon,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
@@ -87,7 +88,11 @@ function MashlaCreator() {
   const [includeSurprise, setIncludeSurprise] = useState(localStorage.getItem('mashla_surprise') === 'true');
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [activeCloudId, setActiveCloudId] = useState<string | null>(null);
+  const [activeCloudId, setActiveCloudId] = useState<string | null>(() => localStorage.getItem('mashla_active_cloud_id'));
+  const [syncStartTime, setSyncStartTime] = useState<number | null>(() => {
+    const saved = localStorage.getItem('mashla_sync_start');
+    return saved ? Number(saved) : null;
+  });
   const [cloudItems, setCloudItems] = useState<SharedItem[]>([]);
   const [showNudge, setShowNudge] = useState(false);
   const [nudgeItems, setNudgeItems] = useState<string[]>([]);
@@ -107,7 +112,11 @@ function MashlaCreator() {
     localStorage.setItem('mashla_custom_note', customNote);
     localStorage.setItem('mashla_surprise', String(includeSurprise));
     localStorage.setItem('mashla_favorites', JSON.stringify(favorites));
-  }, [categories, selectedItems, budget, loveNote, customNote, includeSurprise, favorites]);
+    if (activeCloudId) localStorage.setItem('mashla_active_cloud_id', activeCloudId);
+    else localStorage.removeItem('mashla_active_cloud_id');
+    if (syncStartTime) localStorage.setItem('mashla_sync_start', String(syncStartTime));
+    else localStorage.removeItem('mashla_sync_start');
+  }, [categories, selectedItems, budget, loveNote, customNote, includeSurprise, favorites, activeCloudId, syncStartTime]);
 
   // Listen to cloud items if tracking is active
   useEffect(() => {
@@ -116,39 +125,37 @@ function MashlaCreator() {
     return () => unsub();
   }, [activeCloudId]);
 
-  // Smart Nudge Timer
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
+  // Smart Nudge Logic
   useEffect(() => {
-    if (!activeCloudId) {
+    if (!activeCloudId || !syncStartTime) {
       setShowNudge(false);
-      if (timerRef.current) clearTimeout(timerRef.current);
       return;
     }
 
-    // Start a 5-minute timer only once when sync begins
-    if (!timerRef.current) {
-      timerRef.current = setTimeout(() => {
-        // We use a functional update or ref logic if needed, 
-        // but here we just check if there are still items to buy
-        setCloudItems(current => {
-          const pending = current.filter(i => !i.completed);
-          if (pending.length > 0) {
-            setNudgeItems(pending.map(p => p.name));
-            setShowNudge(true);
-          }
-          return current;
-        });
-      }, 5 * 60 * 1000);
-    }
+    const checkNudge = () => {
+      const now = Date.now();
+      const elapsed = now - syncStartTime;
+      const nudgeThreshold = 5 * 60 * 1000; // 5 Minutes
 
-    return () => {
-      if (timerRef.current && !activeCloudId) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
+      if (elapsed >= nudgeThreshold) {
+        const pending = cloudItems.filter(i => !i.completed);
+        if (pending.length > 0) {
+          setNudgeItems(pending.map(p => p.name));
+          setShowNudge(true);
+        } else {
+          setShowNudge(false);
+        }
+      } else {
+        setShowNudge(false);
       }
     };
-  }, [activeCloudId]);
+
+    // Run every 10 seconds to check if we crossed the 5-min mark
+    const interval = setInterval(checkNudge, 10000);
+    checkNudge(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [activeCloudId, syncStartTime, cloudItems]);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -162,6 +169,7 @@ function MashlaCreator() {
       setSelectedItems({});
       setBudget('');
       setActiveCloudId(null);
+      setSyncStartTime(null);
     }
   };
 
@@ -344,7 +352,7 @@ function MashlaCreator() {
         loveNote: finalNote,
         includeSurprise,
         status: 'active'
-      }, Object.values(selectedItems).map(i => ({
+      }, (Object.values(selectedItems) as SelectedItem[]).map(i => ({
         name: i.name,
         category: i.category,
         quantity: i.quantity,
@@ -357,6 +365,7 @@ function MashlaCreator() {
       
       if (listId) {
         setActiveCloudId(listId);
+        setSyncStartTime(Date.now());
         const shareUrl = `${window.location.origin}/list/${listId}`;
         const message = `الماشلة السحابية جاهزة! ☁️\nافتح الرابط لمتابعة المقاضي وشطبها مباشرة:\n${shareUrl}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
@@ -495,7 +504,7 @@ function MashlaCreator() {
           <nav className="flex-1 overflow-y-auto py-2">
             {categories.map(cat => {
               const isActive = activeTab === cat.id;
-              const selectedInCat = Object.values(selectedItems).filter(i => i.category === cat.name).length;
+              const selectedInCat = (Object.values(selectedItems) as SelectedItem[]).filter(i => i.category === cat.name).length;
               return (
                 <div 
                   key={cat.id}
@@ -546,7 +555,7 @@ function MashlaCreator() {
                   )}
                 >
                   {cat.name}
-                  {Object.values(selectedItems).filter(i => i.category === cat.name).length > 0 && <span>•</span>}
+                  {(Object.values(selectedItems) as SelectedItem[]).filter(i => i.category === cat.name).length > 0 && <span>•</span>}
                 </button>
               ))}
             </div>
@@ -630,7 +639,7 @@ function MashlaCreator() {
                      </button>
                    </div>
                   <span className="hidden sm:inline-block bg-white border border-border px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm whitespace-nowrap">
-                    {Object.values(selectedItems).filter(i => i.category === activeCategoryItems?.name).length} مختار
+                    {(Object.values(selectedItems) as SelectedItem[]).filter(i => i.category === activeCategoryItems?.name).length} مختار
                   </span>
                 </div>
               </div>
@@ -1135,7 +1144,7 @@ function MashlaShopper() {
         </div>
 
         <div className="space-y-6">
-          {Object.entries(itemsByCat).map(([cat, catItems]) => (
+          {(Object.entries(itemsByCat) as [string, SharedItem[]][]).map(([cat, catItems]) => (
             <div key={cat} className="space-y-3">
               <h3 className="text-xs font-bold text-primary flex items-center gap-2 px-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> {cat}
