@@ -89,6 +89,8 @@ function MashlaCreator() {
   const [isExporting, setIsExporting] = useState(false);
   const [activeCloudId, setActiveCloudId] = useState<string | null>(null);
   const [cloudItems, setCloudItems] = useState<SharedItem[]>([]);
+  const [showNudge, setShowNudge] = useState(false);
+  const [nudgeItems, setNudgeItems] = useState<string[]>([]);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [editingItem, setEditingItem] = useState<{ catId: string, oldName: string } | null>(null);
@@ -112,6 +114,27 @@ function MashlaCreator() {
     if (!activeCloudId) return;
     const unsub = MashlaService.listenToItems(activeCloudId, setCloudItems);
     return () => unsub();
+  }, [activeCloudId]);
+
+  // Smart Nudge Timer
+  useEffect(() => {
+    if (!activeCloudId) {
+      setShowNudge(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCloudItems(current => {
+        const pending = current.filter(i => !i.completed);
+        if (pending.length > 0) {
+          setNudgeItems(pending.map(p => p.name));
+          setShowNudge(true);
+        }
+        return current;
+      });
+    }, 5 * 60 * 1000);
+
+    return () => clearTimeout(timer);
   }, [activeCloudId]);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
@@ -404,6 +427,33 @@ function MashlaCreator() {
              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
              <span className="text-[10px] font-bold text-primary">{completedCount}/{totalCount}</span>
           </div>
+        )}
+        
+        {showNudge && nudgeItems.length > 0 && completedCount < totalCount && (
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="lg:hidden fixed top-20 left-4 right-4 z-[60] bg-accent p-3 rounded-2xl shadow-2xl flex items-center justify-between border border-white/20"
+          >
+            <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white">
+                  <Gift size={16} />
+               </div>
+               <div>
+                  <p className="text-[10px] font-black text-white/80">نسي بعض الأغراض؟</p>
+                  <p className="text-xs font-bold text-white">تذكير بالأصناف المتبقية</p>
+               </div>
+            </div>
+            <button 
+              onClick={() => {
+                const message = `حبيبي لا تنسى الماشلة المتبقية: 🛒\n${nudgeItems.join(' - ')}\n\nتقدر تشطبها من هنا:\n${window.location.origin}/list/${activeCloudId}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+              }}
+              className="bg-white text-accent px-4 py-2 rounded-xl text-[10px] font-black shadow-sm"
+            >
+              تذكير ✉️
+            </button>
+          </motion.div>
         )}
         
         <div className="flex items-center gap-2">
@@ -705,37 +755,69 @@ function MashlaCreator() {
         <aside className="hidden xl:flex w-80 bg-white border-r border-border flex-col p-6 shadow-2xl shrink-0">
           <div className="flex-1 flex flex-col gap-8 overflow-y-auto no-scrollbar">
             {activeCloudId && (
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center justify-between mb-2">
-                   <div className="flex items-center gap-2 text-primary font-bold text-xs">
-                     <CloudIcon size={14} />
-                     <span>المتابعة الحية</span>
-                   </div>
-                   <span className="text-[10px] text-accent font-bold px-2 py-0.5 bg-accent/10 rounded-full animate-pulse">متصل</span>
+              <div className="space-y-4">
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="flex items-center justify-between mb-2">
+                     <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                       <CloudIcon size={14} />
+                       <span>المتابعة الحية</span>
+                     </div>
+                     <span className="text-[10px] text-accent font-bold px-2 py-0.5 bg-accent/10 rounded-full animate-pulse">متصل</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                      <span>تم شطب {completedCount} من {totalCount}</span>
+                      <span>{Math.round((completedCount/totalCount)*100) || 0}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(completedCount/totalCount)*100}%` }}
+                        className="h-full bg-primary"
+                      />
+                    </div>
+                    <button 
+                      onClick={() => {
+                          const shareUrl = `${window.location.origin}/list/${activeCloudId}`;
+                          const message = `تذكير بمقاضي البيت: 🛒\n${shareUrl}`;
+                          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                      }}
+                      className="w-full py-2 bg-white border border-primary/20 text-primary text-[10px] font-bold rounded-lg hover:bg-primary/5 transition-colors"
+                    >
+                      إعادة إرسال الرابط لزوجك 🔗
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-500">
-                    <span>تم شطب {completedCount} من {totalCount}</span>
-                    <span>{Math.round((completedCount/totalCount)*100) || 0}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(completedCount/totalCount)*100}%` }}
-                      className="h-full bg-primary"
-                    />
-                  </div>
-                  <button 
-                    onClick={() => {
-                        const shareUrl = `${window.location.origin}/list/${activeCloudId}`;
-                        const message = `تذكير بمقاضي البيت: 🛒\n${shareUrl}`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                    }}
-                    className="w-full py-2 bg-white border border-primary/20 text-primary text-[10px] font-bold rounded-lg hover:bg-primary/5 transition-colors"
+
+                {showNudge && nudgeItems.length > 0 && completedCount < totalCount && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-accent/10 border border-accent/20 rounded-2xl p-4 relative overflow-hidden"
                   >
-                    إعادة إرسال الرابط لزوجك 🔗
-                  </button>
-                </div>
+                    <div className="absolute -top-2 -left-2 text-accent/10">
+                      <Sparkles size={40} />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 text-accent font-black text-[11px] mb-2">
+                         <Gift size={14} />
+                         <span>مساعد الماشلة الذكي</span>
+                      </div>
+                      <p className="text-[10px] text-text-soft font-bold mb-3 leading-relaxed">
+                        مرت 5 دقائق ويبدو أنه نسي: <span className="text-accent underline">{nudgeItems[0]}</span> {nudgeItems.length > 1 && `و${nudgeItems.length - 1} أصناف أخرى.`}
+                      </p>
+                      <button 
+                        onClick={() => {
+                          const message = `حبيبي لا تنسى الماشلة المتبقية: 🛒\n${nudgeItems.join(' - ')}\n\nتقدر تشطبها من هنا:\n${window.location.origin}/list/${activeCloudId}`;
+                          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                        }}
+                        className="w-full py-2 bg-accent text-white text-[10px] font-black rounded-lg shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-95 transition-all"
+                      >
+                        تذكيره بالمنسيات الآن ✉️
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
 
