@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "MashlaList": {
+      "title": "Mashla Shopping List",
+      "description": "A shared shopping list synced in real-time.",
+      "type": "object",
+      "properties": {
+        "store": { "type": "string" },
+        "budget": { "type": "string" },
+        "loveNote": { "type": "string" },
+        "includeSurprise": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["store", "status", "createdAt", "updatedAt"]
+    },
+    "MashlaItem": {
+      "title": "Shopping Item",
+      "description": "An item in the shopping list.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "note": { "type": "string" },
+        "completed": { "type": "boolean" }
+      },
+      "required": ["name", "category", "quantity", "unit", "completed"]
+    }
+  },
+  "firestore": {
+    "mashla_lists/{listId}": {
+      "schema": "MashlaList",
+      "description": "Root collection for shared shopping lists."
+    },
+    "mashla_lists/{listId}/items/{itemId}": {
+      "schema": "MashlaItem",
+      "description": "Individual items in a shared list."
+    }
+  }
+}

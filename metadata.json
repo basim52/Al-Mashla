@@ -1,0 +1,8 @@
+{
+  "name": "الماشلة - Al-Mashla",
+  "description": "تطبيق لإدارة مقاضي البيت السعودي وإرسالها عبر الواتساب بلمسة حب.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

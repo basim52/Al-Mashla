@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    // --- Mashla List Validation ---
+    function isValidMashlaList(data) {
+      return data.keys().hasAll(['store', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 10
+        && data.store is string && data.store.size() <= 100
+        && data.status in ['active', 'completed']
+        && (data.budget == null || (data.budget is string && data.budget.size() <= 50))
+        && (data.loveNote == null || (data.loveNote is string && data.loveNote.size() <= 500))
+        && (data.includeSurprise is bool)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isUpdateValidMashlaList(data) {
+      return data.updatedAt == request.time
+        && (data.status in ['active', 'completed']);
+    }
+
+    // --- Mashla Item Validation ---
+    function isValidMashlaItem(data) {
+      return data.keys().hasAll(['name', 'category', 'quantity', 'unit', 'completed'])
+        && data.keys().size() <= 7
+        && data.name is string && data.name.size() <= 100
+        && data.category is string && data.category.size() <= 50
+        && data.quantity is number && data.quantity >= 0
+        && data.unit is string && data.unit.size() <= 20
+        && data.completed is bool
+        && (!('note' in data) || (data.note is string && data.note.size() <= 300));
+    }
+
+    // --- Specific Match Blocks ---
+
+    match /mashla_lists/{listId} {
+      allow get: if isValidId(listId);
+      
+      // Creating a list - limit frequency could be handled elsewhere, 
+      // but here we just ensure schema integrity.
+      allow create: if isValidId(listId) && isValidMashlaList(incoming());
+      
+      // Updating metadata (e.g. status)
+      allow update: if isValidId(listId) 
+        && isUpdateValidMashlaList(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      match /items/{itemId} {
+        allow list: if isValidId(listId);
+        allow get: if isValidId(listId) && isValidId(itemId);
+        
+        // Items are created when list is created (or shortly after)
+        allow create: if isValidId(listId) && isValidId(itemId) && isValidMashlaItem(incoming());
+        
+        // The core "strike out" action: only 'completed' can change.
+        allow update: if isValidId(listId) && isValidId(itemId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['completed'])
+          && incoming().completed is bool;
+      }
+    }
+  }
+}
