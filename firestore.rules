@@ -17,13 +17,14 @@ service cloud.firestore {
 
     // --- Mashla List Validation ---
     function isValidMashlaList(data) {
-      return data.keys().hasAll(['store', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().size() <= 10
-        && data.store is string && data.store.size() <= 100
+      let keys = data.keys();
+      return keys.hasAll(['store', 'status', 'createdAt', 'updatedAt'])
+        && keys.size() <= 12
+        && data.store is string && data.store.size() <= 200
         && data.status in ['active', 'completed']
-        && (data.budget == null || (data.budget is string && data.budget.size() <= 50))
-        && (data.loveNote == null || (data.loveNote is string && data.loveNote.size() <= 500))
-        && (data.includeSurprise is bool)
+        && (!('budget' in data) || data.budget is string)
+        && (!('loveNote' in data) || data.loveNote is string)
+        && (!('includeSurprise' in data) || data.includeSurprise is bool)
         && data.createdAt == request.time
         && data.updatedAt == request.time;
     }
@@ -35,14 +36,15 @@ service cloud.firestore {
 
     // --- Mashla Item Validation ---
     function isValidMashlaItem(data) {
-      return data.keys().hasAll(['name', 'category', 'quantity', 'unit', 'completed'])
-        && data.keys().size() <= 7
+      let keys = data.keys();
+      return keys.hasAll(['name', 'category', 'quantity', 'unit', 'completed'])
+        && keys.size() <= 8
         && data.name is string && data.name.size() <= 100
         && data.category is string && data.category.size() <= 50
-        && data.quantity is number && data.quantity >= 0
-        && data.unit is string && data.unit.size() <= 20
+        && data.quantity is number
+        && data.unit is string && data.unit.size() <= 50
         && data.completed is bool
-        && (!('note' in data) || (data.note is string && data.note.size() <= 300));
+        && (!('note' in data) || data.note is string);
     }
 
     // --- Specific Match Blocks ---
