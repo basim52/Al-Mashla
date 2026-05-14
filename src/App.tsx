@@ -770,6 +770,123 @@ function MashlaCreator() {
                   })}
                 </AnimatePresence>
               </div>
+              <div className="xl:hidden mt-12 space-y-8 pb-32">
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-border space-y-6">
+                  <h3 className="text-lg font-bold text-text-deep flex items-center gap-2">
+                    <Sparkles className="text-accent" size={20} />
+                    <span>تجهيز اللمسات الأخيرة</span>
+                  </h3>
+
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-bold text-primary mb-1 uppercase tracking-widest flex items-center gap-2">
+                      <Wallet size={14} /> 💰 الميزانية المقترحة
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full border border-border bg-secondary rounded-xl p-4 text-xl font-bold text-text-deep focus:outline-none focus:ring-1 focus:ring-primary text-left"
+                      />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-accent text-sm font-sans">ريال</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-bold text-primary mb-1 uppercase tracking-widest flex items-center gap-2">
+                      <Heart size={14} className="fill-primary" /> ❤️ عبري عن مشاعرك
+                    </label>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {LOVE_NOTES.map((n, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setLoveNote(n);
+                            setCustomNote('');
+                          }}
+                          className={cn(
+                            "text-right p-3 rounded-xl border text-xs transition-all flex items-center gap-3 relative overflow-hidden",
+                            loveNote === n && customNote === '' 
+                              ? "bg-primary/5 border-primary ring-1 ring-primary shadow-sm" 
+                              : "bg-white border-border hover:border-primary/30"
+                          )}
+                        >
+                          <div className="flex-1 font-medium">{n}</div>
+                          {loveNote === n && customNote === '' && (
+                            <div className="bg-primary text-white p-1 rounded-full">
+                              <Check size={10} />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                      
+                      <button
+                        onClick={() => setLoveNote('مخصصة')}
+                        className={cn(
+                          "text-right p-3 rounded-xl border text-xs transition-all flex items-center gap-3",
+                          loveNote === 'مخصصة'
+                            ? "bg-primary/5 border-primary ring-1 ring-primary shadow-sm" 
+                            : "bg-white border-border hover:border-primary/30"
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                          <PenTool size={14} />
+                        </div>
+                        <div className="flex-1 font-bold text-accent">رسالة مخصصة ✨</div>
+                      </button>
+                    </div>
+
+                    {loveNote === 'مخصصة' && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="space-y-3"
+                      >
+                        <div className="relative">
+                          <textarea 
+                            placeholder="اكتبي رسالة من القلب..." 
+                            className="w-full h-32 border border-border bg-white rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none shadow-sm"
+                            value={customNote}
+                            onChange={(e) => setCustomNote(e.target.value)}
+                          />
+                          <div className="absolute bottom-3 left-3 flex gap-2">
+                             {['❤️', '🥰', '🙏', '✨', '🏡', '🍰'].map(emoji => (
+                               <button 
+                                 key={emoji}
+                                 onClick={() => setCustomNote(prev => prev + emoji)}
+                                 className="w-8 h-8 rounded-full bg-secondary hover:bg-gray-100 flex items-center justify-center text-sm transition-transform active:scale-125"
+                               >
+                                 {emoji}
+                               </button>
+                             ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div 
+                    onClick={() => setIncludeSurprise(!includeSurprise)}
+                    className={cn(
+                      "border-2 border-dashed p-4 rounded-xl flex items-center gap-3 cursor-pointer transition-all",
+                      includeSurprise ? "bg-accent/5 border-accent shadow-sm" : "border-border bg-transparent shadow-inner"
+                    )}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={includeSurprise}
+                      readOnly
+                      className="rounded border-border text-accent focus:ring-accent" 
+                    />
+                    <label className={cn(
+                      "text-sm font-medium leading-relaxed",
+                      includeSurprise ? "text-accent font-bold" : "text-text-soft"
+                    )}>ولا تنسى تجيب لنا معاك شيء حلو على ذوقك 🍰</label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -859,25 +976,77 @@ function MashlaCreator() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold text-primary mb-3 uppercase tracking-widest flex items-center gap-2">
-                <Heart size={14} /> ❤️ كلمة من القلب
+            <div className="space-y-4">
+              <label className="block text-[10px] font-bold text-primary mb-1 uppercase tracking-widest flex items-center gap-2">
+                <Heart size={14} className="fill-primary" /> ❤️ عبري عن مشاعرك
               </label>
-              <select 
-                className="w-full border border-border bg-secondary rounded-xl p-3 mb-3 focus:outline-none text-sm"
-                value={loveNote}
-                onChange={(e) => setLoveNote(e.target.value)}
-              >
-                {LOVE_NOTES.map((n, i) => <option key={i} value={n}>{n}</option>)}
-                <option value="مخصصة">كتابة رسالة مخصصة...</option>
-              </select>
+              
+              <div className="grid grid-cols-1 gap-2">
+                {LOVE_NOTES.map((n, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setLoveNote(n);
+                      setCustomNote(''); // Clear custom when picking preset
+                    }}
+                    className={cn(
+                      "text-right p-3 rounded-xl border text-xs transition-all flex items-center gap-3 relative overflow-hidden",
+                      loveNote === n && customNote === '' 
+                        ? "bg-primary/5 border-primary ring-1 ring-primary shadow-sm" 
+                        : "bg-white border-border hover:border-primary/30"
+                    )}
+                  >
+                    <div className="flex-1 font-medium">{n}</div>
+                    {loveNote === n && customNote === '' && (
+                      <div className="bg-primary text-white p-1 rounded-full">
+                        <Check size={10} />
+                      </div>
+                    )}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => setLoveNote('مخصصة')}
+                  className={cn(
+                    "text-right p-3 rounded-xl border text-xs transition-all flex items-center gap-3",
+                    loveNote === 'مخصصة'
+                      ? "bg-primary/5 border-primary ring-1 ring-primary shadow-sm" 
+                      : "bg-white border-border hover:border-primary/30"
+                  )}
+                >
+                  <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                    <PenTool size={14} />
+                  </div>
+                  <div className="flex-1 font-bold">كتابة رسالة خاصة...</div>
+                </button>
+              </div>
+
               {loveNote === 'مخصصة' && (
-                <textarea 
-                  placeholder="اكتبي رسالة من القلب..." 
-                  className="w-full h-24 border border-border bg-secondary rounded-xl p-3 text-sm focus:outline-none resize-none shadow-inner"
-                  value={customNote}
-                  onChange={(e) => setCustomNote(e.target.value)}
-                />
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-3"
+                >
+                  <div className="relative">
+                    <textarea 
+                      placeholder="اكتبي رسالة من القلب..." 
+                      className="w-full h-28 border border-border bg-white rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none shadow-sm"
+                      value={customNote}
+                      onChange={(e) => setCustomNote(e.target.value)}
+                    />
+                    <div className="absolute bottom-3 left-3 flex gap-2">
+                       {['❤️', '🥰', '🙏', '✨', '🏡', '🍰'].map(emoji => (
+                         <button 
+                           key={emoji}
+                           onClick={() => setCustomNote(prev => prev + emoji)}
+                           className="w-8 h-8 rounded-full bg-secondary hover:bg-gray-100 flex items-center justify-center text-sm transition-transform active:scale-125"
+                         >
+                           {emoji}
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+                </motion.div>
               )}
             </div>
 
