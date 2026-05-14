@@ -116,24 +116,39 @@ function MashlaCreator() {
     return () => unsub();
   }, [activeCloudId]);
 
-  // Smart Nudge Timer - Triggered 5 minutes after cloud sync starts
+  // Smart Nudge Timer
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!activeCloudId) {
       setShowNudge(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
       return;
     }
 
-    const timer = setTimeout(() => {
-      // Check current cloudItems state
-      const pending = cloudItems.filter(i => !i.completed);
-      if (pending.length > 0) {
-        setNudgeItems(pending.map(p => p.name));
-        setShowNudge(true);
-      }
-    }, 5 * 60 * 1000);
+    // Start a 5-minute timer only once when sync begins
+    if (!timerRef.current) {
+      timerRef.current = setTimeout(() => {
+        // We use a functional update or ref logic if needed, 
+        // but here we just check if there are still items to buy
+        setCloudItems(current => {
+          const pending = current.filter(i => !i.completed);
+          if (pending.length > 0) {
+            setNudgeItems(pending.map(p => p.name));
+            setShowNudge(true);
+          }
+          return current;
+        });
+      }, 5 * 60 * 1000);
+    }
 
-    return () => clearTimeout(timer);
-  }, [activeCloudId, cloudItems]);
+    return () => {
+      if (timerRef.current && !activeCloudId) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [activeCloudId]);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
